@@ -5,6 +5,7 @@ require 'securerandom'
 
 enable :sessions
 set :session_secret, ENV['SESSION_SECRET'] || SecureRandom.hex(64)
+set :environment, :development
 
 # Simple in-memory user store (replace with a database in production)
 users = {}
@@ -34,7 +35,7 @@ post '/login' do
     session[:csrf_token] = SecureRandom.hex(32)
     redirect '/dashboard'
   else
-    flash[:error] = "Invalid username or password" # flash render message error
+    flash[:error] = "Invalid username or password"
     redirect '/login'
   end
 end
@@ -44,12 +45,16 @@ get '/register' do
   erb :register
 end  
 
-
 # Registration form submission
 post '/register' do
   username = params[:username]
   password = params[:password]
-  
+  confirm_password = params[:confirm_password]
+
+  if password != confirm_password
+    flash[:error] = "Las contraseñas no coinciden"
+    redirect '/register'
+
   if username.nil? || username.empty? || password.nil? || password.empty?
     flash[:error] = "Username and password are required"
     redirect '/register'
@@ -68,17 +73,11 @@ end
 
 # Dashboard (protected route)
 get '/dashboard' do
-  erb :dashboard, locals: { username: session[:user_id], csrf_token: session[:csrf_token] }
+  erb :dashboard  # El middleware asegura que el usuario esté logueado, no es necesario verificar aquí
 end
 
 # Logout
-post '/logout' do
-  # Verify CSRF token
-  if params[:csrf_token] == session[:csrf_token]
-    session.clear
-    redirect '/'
-  else
-    status 403
-    "CSRF token verification failed"
-  end
+get '/logout' do
+  session.clear
+  redirect '/login'
 end

@@ -1,60 +1,45 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-  <title>Sinatra Login System</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    .flash {
-      padding: 10px;
-      margin-bottom: 20px;
-      border-radius: 4px;
-    }
-    .flash.error {
-      background-color: #ffdddd;
-      border: 1px solid #ff0000;
-    }
-    .flash.success {
-      background-color: #ddffdd;
-      border: 1px solid #00ff00;
-    }
-    form {
-      margin-bottom: 20px;
-    }
-    label {
-      display: block;
-      margin-bottom: 5px;
-    }
-    input[type="text"], input[type="password"] {
-      width: 300px;
-      padding: 8px;
-      margin-bottom: 15px;
-    }
-    button {
-      padding: 8px 16px;
-      background-color: #4285f4;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #3367d6;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Banco Virtual</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <!-- Agregar Font Awesome para iconos -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-  <% if flash[:error] %>
-    <div class="flash error"><%= flash[:error] %></div>
-  <% end %>
-  <% if flash[:success] %>
-    <div class="flash success"><%= flash[:success] %></div>
-  <% end %>
-  
-  <%= yield %>
+  <nav class="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">
+        <i class="fas fa-university"></i> Banco Virtual
+      </a>
+      <div class="navbar-menu">
+        <% if session[:user_id] %>
+          <a href="/dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+          <a href="/logout"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+        <% else %>
+          <a href="/login"><i class="fas fa-sign-in-alt"></i> Iniciar Sesión</a>
+          <a href="/register"><i class="fas fa-user-plus"></i> Registrarse</a>
+        <% end %>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-4">
+    <% if session[:flash] %>
+      <div class="alert alert-<%= session[:flash_type] || 'success' %>">
+        <%= session[:flash] %>
+      </div>
+      <% session[:flash] = nil %>
+      <% session[:flash_type] = nil %>
+    <% end %>
+
+    <%= yield %>
+  </div>
+
+  <footer class="text-center mt-4 mb-4">
+    <p>&copy; <%= Time.now.year %> Banco Virtual. Todos los derechos reservados.</p>
+  </footer>
 </body>
 </html>

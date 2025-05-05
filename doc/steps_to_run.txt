@@ -1,0 +1,5 @@
+in file container execute:
+1) gem install bundler
+2)bundle install
+3) ruby app.rb
+4) enjoy!!!
