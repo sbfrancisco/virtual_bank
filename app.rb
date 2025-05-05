@@ -1,37 +1,84 @@
 require 'sinatra'
+require 'sinatra/flash'
+require 'bcrypt'
+require 'securerandom'
 
-enable :sessions  # Habilita sesiones
+enable :sessions
+set :session_secret, ENV['SESSION_SECRET'] || SecureRandom.hex(64)
 
-# Datos de usuario (simulación, en una base de datos real estarían almacenados de otra forma)
-USUARIOS = { "admin" => "1234", "usuario" => "pass" }
+# Simple in-memory user store (replace with a database in production)
+users = {}
 
-# Página de inicio (login)
+# Middleware to check if user is logged in
+before '/dashboard*' do
+  redirect '/login' unless session[:user_id]
+end
+
+# Home page
 get '/' do
+  erb :index
+end
+
+# Login page
+get '/login' do
   erb :login
 end
 
-# Ruta para procesar el login
+# Login form submission
 post '/login' do
-  usuario = params[:usuario]
+  username = params[:username]
   password = params[:password]
-
-  if USUARIOS[usuario] == password  # Verifica credenciales
-    session[:usuario] = usuario  # Guarda sesión
-    redirect '/dashboard'  # Redirige a la página protegida
+  
+  if users[username] && BCrypt::Password.new(users[username][:password]) == password
+    session[:user_id] = username
+    session[:csrf_token] = SecureRandom.hex(32)
+    redirect '/dashboard'
   else
-    @error = "Usuario o contraseña incorrectos"
-    erb :login  # Vuelve al login con mensaje de error
+    flash[:error] = "Invalid username or password" # flash render message error
+    redirect '/login'
   end
 end
 
-# Ruta protegida (requiere estar logueado)
-get '/dashboard' do
-  redirect '/' unless session[:usuario]  # Si no hay sesión, vuelve al login
-  erb :dashboard
+# Registration page
+get '/register' do
+  erb :register
+end  
+
+
+# Registration form submission
+post '/register' do
+  username = params[:username]
+  password = params[:password]
+  
+  if username.nil? || username.empty? || password.nil? || password.empty?
+    flash[:error] = "Username and password are required"
+    redirect '/register'
+  elsif users[username]
+    flash[:error] = "Username already exists"
+    redirect '/register'
+  else
+    # Hash the password before storing
+    hashed_password = BCrypt::Password.create(password)
+    users[username] = { password: hashed_password }
+    
+    flash[:success] = "Registration successful! Please log in."
+    redirect '/login'
+  end
 end
 
-# Cerrar sesión
-get '/logout' do
-  session.clear  # Borra la sesión
-  redirect '/'
+# Dashboard (protected route)
+get '/dashboard' do
+  erb :dashboard, locals: { username: session[:user_id], csrf_token: session[:csrf_token] }
+end
+
+# Logout
+post '/logout' do
+  # Verify CSRF token
+  if params[:csrf_token] == session[:csrf_token]
+    session.clear
+    redirect '/'
+  else
+    status 403
+    "CSRF token verification failed"
+  end
 end
