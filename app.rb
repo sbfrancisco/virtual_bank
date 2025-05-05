@@ -7,78 +7,79 @@ enable :sessions
 set :session_secret, ENV['SESSION_SECRET'] || SecureRandom.hex(64)
 set :environment, :development
 
-# Simple in-memory user store (replace with a database in production)
+# Store de usuarios (en memoria, solo para pruebas)
 users = {}
 
-# Middleware to check if user is logged in
+# Middleware para proteger rutas del dashboard
 before '/dashboard*' do
   redirect '/login' unless session[:user_id]
 end
 
-# Home page
+# Página principal
 get '/' do
   erb :index
 end
 
-# Login page
+# Página de login
 get '/login' do
   erb :login
 end
 
-# Login form submission
+# Procesar formulario de login
 post '/login' do
   username = params[:username]
   password = params[:password]
-  
+
   if users[username] && BCrypt::Password.new(users[username][:password]) == password
     session[:user_id] = username
     session[:csrf_token] = SecureRandom.hex(32)
     redirect '/dashboard'
   else
-    flash[:error] = "Invalid username or password"
+    flash[:error] = "Nombre de usuario o contraseña inválidos"
     redirect '/login'
   end
 end
 
-# Registration page
+# Página de registro
 get '/register' do
   erb :register
-end  
+end
 
-# Registration form submission
+# Procesar formulario de registro
 post '/register' do
   username = params[:username]
   password = params[:password]
   confirm_password = params[:confirm_password]
 
+  # Verificación de contraseñas coincidentes
   if password != confirm_password
     flash[:error] = "Las contraseñas no coinciden"
     redirect '/register'
-
-  if username.nil? || username.empty? || password.nil? || password.empty?
-    flash[:error] = "Username and password are required"
+  # Validación de campos vacíos
+  elsif username.to_s.strip.empty? || password.to_s.strip.empty?
+    flash[:error] = "Se requieren nombre de usuario y contraseña"
     redirect '/register'
+  # Verificación de existencia de usuario
   elsif users[username]
-    flash[:error] = "Username already exists"
+    flash[:error] = "El nombre de usuario ya existe"
     redirect '/register'
   else
-    # Hash the password before storing
+    # Encriptación de la contraseña y almacenamiento del usuario
     hashed_password = BCrypt::Password.create(password)
     users[username] = { password: hashed_password }
-    
-    flash[:success] = "Registration successful! Please log in."
+
+    flash[:success] = "Registro exitoso. Inicia sesión."
     redirect '/login'
   end
 end
 
-# Dashboard (protected route)
+# Dashboard (protegido)
 get '/dashboard' do
-  erb :dashboard  # El middleware asegura que el usuario esté logueado, no es necesario verificar aquí
+  erb :dashboard
 end
 
 # Logout
 get '/logout' do
   session.clear
   redirect '/login'
-end
 end
